@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>مكتبة البرومبتات اليدوية</title>
-  <meta name="description" content="مكتبة احترافية لجمع البرومبتات اليدوية العربية مع صور المعاينة والمتغيرات والنسخ الفوري." />
+  <meta name="description" content="مكتبة احترافية لجمع البرومبتات اليدوية العربية مع صور المعاينة والمتغيرات ونسخ فوري واستوديو لإضافة النماذج الجديدة." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -14,11 +14,11 @@
   <div class="page-shell">
     <header class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">Prompt Album</span>
+        <span class="eyebrow">Prompt Album Studio</span>
         <h1>مكتبة البرومبتات اليدوية</h1>
         <p>
           منصة واحدة لجمع البرومبتات اليدوية الراقية، مع صورة نموذجية لكل عمل، وحقول متغيرة،
-          وتوليد فوري للناتج الجاهز لنسخه إلى Nano Banana.
+          وتوليد فوري للناتج الجاهز، واستوديو مدمج لإنشاء بطاقات جديدة للمكتبة.
         </p>
         <div class="hero-stats">
           <div class="stat-card">
@@ -42,6 +42,10 @@
           <input id="globalSearch" type="search" placeholder="اسم النموذج، التصنيف، أو كلمة من الوصف" />
         </label>
         <div id="categoryTabs" class="tabs" aria-label="تصنيفات البرومبتات"></div>
+        <div class="hero-actions">
+          <button id="jumpToStudioBtn" class="secondary" type="button">الانتقال إلى الاستوديو</button>
+          <button id="exportLibraryBtn" class="ghost" type="button">تصدير المكتبة JSON</button>
+        </div>
       </div>
     </header>
 
@@ -97,6 +101,7 @@
                 <button id="copyGeneratedBtn" type="button">نسخ البرومبت الناتج</button>
                 <button id="downloadBtn" class="secondary" type="button">تنزيل TXT</button>
                 <button id="copyTemplateBtn" class="ghost" type="button">نسخ القالب الأصلي</button>
+                <button id="sendToStudioBtn" class="secondary" type="button">إرسال إلى الاستوديو</button>
               </div>
             </div>
           </section>
@@ -131,8 +136,112 @@
       </section>
     </main>
 
+    <section id="studioSection" class="studio glass-card">
+      <div class="panel-head studio-head">
+        <div>
+          <h2>استوديو إدارة المكتبة</h2>
+          <p>
+            أنشئ بطاقة جديدة للمكتبة من برومبت يدوي، ثم انسخ الكائن الجاهز وألصقه داخل ملف <strong>prompts.js</strong>.
+          </p>
+        </div>
+        <div class="studio-tools">
+          <span id="builderVariableCount" class="counter-pill quiet">0 متغيرات</span>
+          <button id="builderResetBtn" class="ghost" type="button">مسح الاستوديو</button>
+        </div>
+      </div>
+
+      <div class="studio-grid">
+        <section class="studio-column">
+          <div class="studio-card glass-inner">
+            <div class="panel-head compact">
+              <div>
+                <h3>بيانات البطاقة</h3>
+                <p>العنوان، التصنيف، الصورة، والوصف.</p>
+              </div>
+            </div>
+            <div class="form two-cols" id="builderMetaForm">
+              <div class="field">
+                <label for="builderTitle">عنوان البرومبت</label>
+                <input id="builderTitle" type="text" placeholder="مثال: بطاقة قصر مخملي" />
+              </div>
+              <div class="field">
+                <label for="builderId">المعرّف</label>
+                <input id="builderId" type="text" placeholder="يُولَّد تلقائيًا إن تُرك فارغًا" />
+              </div>
+              <div class="field">
+                <label for="builderCategory">التصنيف</label>
+                <input id="builderCategory" type="text" placeholder="مثال: ملكي" />
+              </div>
+              <div class="field">
+                <label for="builderAccent">وسم الواجهة</label>
+                <input id="builderAccent" type="text" placeholder="مثال: فخامة ليلية" />
+              </div>
+              <div class="field two-span">
+                <label for="builderImage">مسار الصورة أو رابطها</label>
+                <input id="builderImage" type="text" placeholder="assets/my-card.png" />
+              </div>
+              <div class="field two-span">
+                <label for="builderDescription">الوصف</label>
+                <textarea id="builderDescription" rows="4" placeholder="وصف قصير يظهر داخل البطاقة."></textarea>
+              </div>
+              <div class="field two-span">
+                <label for="builderTags">الوسوم</label>
+                <input id="builderTags" type="text" placeholder="مفصولة بفواصل، مثل: هلال، فوانيس، رخام" />
+              </div>
+            </div>
+          </div>
+
+          <div class="studio-card glass-inner">
+            <div class="panel-head compact">
+              <div>
+                <h3>قالب البرومبت</h3>
+                <p>اكتب البرومبت كاملًا، واستخدم المتغيرات بهذا الشكل: {{main_text}}</p>
+              </div>
+              <div class="inline-tools">
+                <button id="scanVariablesBtn" class="secondary" type="button">قراءة المتغيرات من القالب</button>
+              </div>
+            </div>
+            <textarea id="builderTemplate" class="code-area" rows="16" spellcheck="false" placeholder='اكتب هنا القالب اليدوي الكامل، مثل: "{{main_text}}"'></textarea>
+          </div>
+        </section>
+
+        <section class="studio-column">
+          <div class="studio-card glass-inner">
+            <div class="panel-head compact">
+              <div>
+                <h3>المتغيرات</h3>
+                <p>لكل متغير اسم ووسم افتراضي ومساعدة قصيرة.</p>
+              </div>
+              <div class="inline-tools">
+                <button id="addVariableBtn" class="secondary" type="button">إضافة متغير</button>
+              </div>
+            </div>
+            <div id="builderVariables" class="builder-vars"></div>
+          </div>
+
+          <div class="studio-card glass-inner">
+            <div class="panel-head compact">
+              <div>
+                <h3>الكائن الجاهز للمكتبة</h3>
+                <p>انسخه والصقه مباشرة داخل المصفوفة <strong>PROMPT_LIBRARY</strong>.</p>
+              </div>
+              <div class="inline-tools">
+                <button id="buildSnippetBtn" type="button">بناء الكائن</button>
+              </div>
+            </div>
+            <textarea id="builderOutput" class="code-area" rows="18" spellcheck="false" placeholder="سيظهر هنا الكائن الجاهز..."></textarea>
+            <div class="action-row top-gap">
+              <button id="copySnippetBtn" type="button">نسخ الكائن</button>
+              <button id="downloadSnippetBtn" class="secondary" type="button">تنزيل JSON</button>
+              <button id="downloadJsSnippetBtn" class="ghost" type="button">تنزيل JS</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <footer class="footer">
-      <p>نسخة مطوّرة من مكتبة البرومبتات اليدوية — قابلة للتوسعة بإضافة أي برومبت جديد عبر ملف البيانات فقط.</p>
+      <p>نسخة مطوّرة من مكتبة البرومبتات اليدوية — ألبوم عرض + استوديو إنشاء + بنية جاهزة للتوسعة عبر ملف البيانات.</p>
     </footer>
   </div>
 

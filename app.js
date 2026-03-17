@@ -1,4 +1,5 @@
-const STATE_KEY = 'manual_prompt_album_v2_state';
+const STATE_KEY = 'manual_prompt_album_v3_state';
+const BUILDER_KEY = 'manual_prompt_album_v3_builder';
 
 const galleryEl = document.getElementById('gallery');
 const categoryTabsEl = document.getElementById('categoryTabs');
@@ -24,7 +25,30 @@ const copyGeneratedBtn = document.getElementById('copyGeneratedBtn');
 const generateBtn = document.getElementById('generateBtn');
 const resetBtn = document.getElementById('resetBtn');
 const downloadBtn = document.getElementById('downloadBtn');
+const sendToStudioBtn = document.getElementById('sendToStudioBtn');
+const jumpToStudioBtn = document.getElementById('jumpToStudioBtn');
+const exportLibraryBtn = document.getElementById('exportLibraryBtn');
+const studioSectionEl = document.getElementById('studioSection');
 const toastEl = document.getElementById('toast');
+
+const builderTitleEl = document.getElementById('builderTitle');
+const builderIdEl = document.getElementById('builderId');
+const builderCategoryEl = document.getElementById('builderCategory');
+const builderAccentEl = document.getElementById('builderAccent');
+const builderImageEl = document.getElementById('builderImage');
+const builderDescriptionEl = document.getElementById('builderDescription');
+const builderTagsEl = document.getElementById('builderTags');
+const builderTemplateEl = document.getElementById('builderTemplate');
+const builderVariablesEl = document.getElementById('builderVariables');
+const builderOutputEl = document.getElementById('builderOutput');
+const builderVariableCountEl = document.getElementById('builderVariableCount');
+const buildSnippetBtn = document.getElementById('buildSnippetBtn');
+const copySnippetBtn = document.getElementById('copySnippetBtn');
+const downloadSnippetBtn = document.getElementById('downloadSnippetBtn');
+const downloadJsSnippetBtn = document.getElementById('downloadJsSnippetBtn');
+const addVariableBtn = document.getElementById('addVariableBtn');
+const scanVariablesBtn = document.getElementById('scanVariablesBtn');
+const builderResetBtn = document.getElementById('builderResetBtn');
 
 const categories = ['الكل', ...new Set(PROMPT_LIBRARY.map(prompt => prompt.category))];
 
@@ -33,6 +57,31 @@ let activeCategory = 'الكل';
 let searchTerm = '';
 let savedFieldValues = {};
 let toastTimer = null;
+let builderState = getDefaultBuilderState();
+
+function getDefaultBuilderState() {
+  return {
+    title: '',
+    id: '',
+    category: '',
+    accentLabel: '',
+    image: '',
+    description: '',
+    tags: '',
+    template: '',
+    variables: []
+  };
+}
+
+function getDefaultVariable(index = 1) {
+  return {
+    key: `variable_${index}`,
+    label: `المتغير ${index}`,
+    type: 'text',
+    default: '',
+    help: ''
+  };
+}
 
 function loadState() {
   try {
@@ -62,6 +111,25 @@ function saveState() {
   localStorage.setItem(STATE_KEY, JSON.stringify(payload));
 }
 
+function loadBuilderState() {
+  try {
+    const raw = localStorage.getItem(BUILDER_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    builderState = {
+      ...getDefaultBuilderState(),
+      ...parsed,
+      variables: Array.isArray(parsed.variables) ? parsed.variables : []
+    };
+  } catch {
+    builderState = getDefaultBuilderState();
+  }
+}
+
+function saveBuilderState() {
+  localStorage.setItem(BUILDER_KEY, JSON.stringify(builderState));
+}
+
 function escapeHtml(str) {
   return String(str)
     .replaceAll('&', '&amp;')
@@ -81,19 +149,31 @@ function normalizeArabic(str) {
     .trim();
 }
 
-function showToast(message) {
-  toastEl.textContent = message;
-  toastEl.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
-}
-
 function slugifyArabic(str) {
   return String(str)
     .trim()
     .replace(/[\\/:*?"<>|]+/g, '-')
     .replace(/\s+/g, '-')
     .slice(0, 80);
+}
+
+function slugifyId(str) {
+  return String(str)
+    .toLowerCase()
+    .trim()
+    .replace(/[أإآ]/g, 'a')
+    .replace(/ى/g, 'y')
+    .replace(/ة/g, 'h')
+    .replace(/[^a-z0-9\u0600-\u06FF]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_');
+}
+
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
 function getFilteredPrompts() {
@@ -290,19 +370,260 @@ async function copyText(text, successMessage) {
   }
 }
 
-function downloadPrompt() {
-  if (!activePrompt) return;
-  const fileName = `${slugifyArabic(activePrompt.title)}.txt`;
-  const blob = new Blob([outputEl.value], { type: 'text/plain;charset=utf-8' });
+function downloadBlob(filename, content, mimeType = 'text/plain;charset=utf-8') {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = fileName;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadPrompt() {
+  if (!activePrompt) return;
+  const fileName = `${slugifyArabic(activePrompt.title)}.txt`;
+  downloadBlob(fileName, outputEl.value);
   showToast('تم تنزيل ملف البرومبت.');
+}
+
+function renderBuilderVariables() {
+  if (!builderState.variables.length) {
+    builderVariablesEl.innerHTML = `
+      <div class="variable-card">
+        <p class="help-note">لا توجد متغيرات بعد. أضف متغيرًا يدويًا أو دع الاستوديو يقرأ {{placeholders}} من القالب.</p>
+      </div>
+    `;
+    builderVariableCountEl.textContent = '0 متغيرات';
+    return;
+  }
+
+  builderVariablesEl.innerHTML = builderState.variables.map((item, index) => `
+    <article class="variable-card" data-index="${index}">
+      <div class="variable-card-head">
+        <strong>${escapeHtml(item.label || item.key || `متغير ${index + 1}`)}</strong>
+        <button class="remove-btn" type="button" data-remove-index="${index}">حذف</button>
+      </div>
+      <div class="variable-grid">
+        <div class="field">
+          <label>المفتاح</label>
+          <input data-prop="key" data-index="${index}" type="text" value="${escapeHtml(item.key || '')}" placeholder="main_text" />
+        </div>
+        <div class="field">
+          <label>الوسم الظاهر</label>
+          <input data-prop="label" data-index="${index}" type="text" value="${escapeHtml(item.label || '')}" placeholder="النص الرئيسي" />
+        </div>
+        <div class="field">
+          <label>النوع</label>
+          <select data-prop="type" data-index="${index}">
+            <option value="text" ${item.type === 'text' ? 'selected' : ''}>text</option>
+            <option value="textarea" ${item.type === 'textarea' ? 'selected' : ''}>textarea</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>القيمة الافتراضية</label>
+          <input data-prop="default" data-index="${index}" type="text" value="${escapeHtml(item.default || '')}" placeholder="القيمة الافتراضية" />
+        </div>
+        <div class="field">
+          <label>المساعدة</label>
+          <input data-prop="help" data-index="${index}" type="text" value="${escapeHtml(item.help || '')}" placeholder="وصف قصير لهذا الحقل" />
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  builderVariableCountEl.textContent = `${builderState.variables.length} متغيرات`;
+
+  builderVariablesEl.querySelectorAll('[data-prop]').forEach(element => {
+    element.addEventListener('input', event => {
+      const index = Number(event.target.dataset.index);
+      const prop = event.target.dataset.prop;
+      if (!builderState.variables[index]) return;
+      builderState.variables[index][prop] = event.target.value;
+      saveBuilderState();
+      buildBuilderSnippet();
+    });
+  });
+
+  builderVariablesEl.querySelectorAll('[data-remove-index]').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.removeIndex);
+      builderState.variables.splice(index, 1);
+      saveBuilderState();
+      renderBuilderVariables();
+      buildBuilderSnippet();
+    });
+  });
+}
+
+function fillBuilderInputs() {
+  builderTitleEl.value = builderState.title;
+  builderIdEl.value = builderState.id;
+  builderCategoryEl.value = builderState.category;
+  builderAccentEl.value = builderState.accentLabel;
+  builderImageEl.value = builderState.image;
+  builderDescriptionEl.value = builderState.description;
+  builderTagsEl.value = builderState.tags;
+  builderTemplateEl.value = builderState.template;
+  renderBuilderVariables();
+  buildBuilderSnippet();
+}
+
+function readBuilderInputs() {
+  builderState.title = builderTitleEl.value.trim();
+  builderState.id = builderIdEl.value.trim();
+  builderState.category = builderCategoryEl.value.trim();
+  builderState.accentLabel = builderAccentEl.value.trim();
+  builderState.image = builderImageEl.value.trim();
+  builderState.description = builderDescriptionEl.value.trim();
+  builderState.tags = builderTagsEl.value.trim();
+  builderState.template = builderTemplateEl.value;
+  saveBuilderState();
+}
+
+function detectTemplateVariables(template) {
+  const matches = [...String(template).matchAll(/{{\s*([a-zA-Z0-9_]+)\s*}}/g)];
+  return [...new Set(matches.map(match => match[1]))];
+}
+
+function scanTemplateVariables() {
+  readBuilderInputs();
+  const keys = detectTemplateVariables(builderState.template);
+  if (!keys.length) {
+    showToast('لم يتم العثور على متغيرات داخل القالب.');
+    return;
+  }
+
+  const currentMap = new Map(builderState.variables.map(item => [item.key, item]));
+  builderState.variables = keys.map((key, index) => {
+    const existing = currentMap.get(key);
+    return existing || {
+      key,
+      label: key,
+      type: key.includes('text') || key.includes('message') ? 'textarea' : 'text',
+      default: '',
+      help: ''
+    };
+  });
+
+  saveBuilderState();
+  renderBuilderVariables();
+  buildBuilderSnippet();
+  showToast('تمت قراءة المتغيرات من القالب.');
+}
+
+function serializeObjectAsJs(data) {
+  const tags = data.tagsArray.map(tag => `    ${JSON.stringify(tag)}`).join(',\n');
+  const variables = data.variables.map(variable => `    { key: ${JSON.stringify(variable.key)}, label: ${JSON.stringify(variable.label)}, type: ${JSON.stringify(variable.type)}, default: ${JSON.stringify(variable.default)}, help: ${JSON.stringify(variable.help)} }`).join(',\n');
+  const escapedTemplate = String(data.template)
+    .replace(/`/g, '\\`')
+    .replace(/\\\$\{/g, '\\\${');
+
+  return `{
+  id: ${JSON.stringify(data.id)},
+  title: ${JSON.stringify(data.title)},
+  category: ${JSON.stringify(data.category)},
+  accentLabel: ${JSON.stringify(data.accentLabel)},
+  image: ${JSON.stringify(data.image)},
+  description: ${JSON.stringify(data.description)},
+  tags: [
+${tags}
+  ],
+  variables: [
+${variables}
+  ],
+  template: \
+\
+\`${escapedTemplate}\`
+}`;
+}
+
+function buildBuilderPayload() {
+  readBuilderInputs();
+  const title = builderState.title || 'برومبت جديد';
+  const generatedId = slugifyId(builderState.id || builderState.title || `prompt_${Date.now()}`) || `prompt_${Date.now()}`;
+  const tagsArray = builderState.tags
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+
+  const cleanedVariables = builderState.variables
+    .map((item, index) => ({
+      key: String(item.key || `variable_${index + 1}`).trim(),
+      label: String(item.label || item.key || `المتغير ${index + 1}`).trim(),
+      type: item.type === 'textarea' ? 'textarea' : 'text',
+      default: String(item.default || ''),
+      help: String(item.help || '')
+    }))
+    .filter(item => item.key);
+
+  return {
+    id: generatedId,
+    title,
+    category: builderState.category || 'غير مصنف',
+    accentLabel: builderState.accentLabel || 'جاهز',
+    image: builderState.image || 'assets/example.png',
+    description: builderState.description || 'وصف مختصر لهذا النموذج.',
+    tagsArray,
+    variables: cleanedVariables,
+    template: builderState.template || ''
+  };
+}
+
+function buildBuilderSnippet() {
+  const payload = buildBuilderPayload();
+  builderOutputEl.value = serializeObjectAsJs(payload);
+  builderIdEl.placeholder = payload.id;
+  return payload;
+}
+
+function addBuilderVariable(variable = null) {
+  const nextIndex = builderState.variables.length + 1;
+  builderState.variables.push(variable || getDefaultVariable(nextIndex));
+  saveBuilderState();
+  renderBuilderVariables();
+  buildBuilderSnippet();
+}
+
+function resetBuilder() {
+  builderState = getDefaultBuilderState();
+  saveBuilderState();
+  fillBuilderInputs();
+  showToast('تم مسح الاستوديو وإعادته للوضع الفارغ.');
+}
+
+function loadPromptIntoBuilder(prompt) {
+  const promptValues = savedFieldValues[prompt.id] || {};
+  builderState = {
+    title: prompt.title,
+    id: prompt.id,
+    category: prompt.category,
+    accentLabel: prompt.accentLabel || '',
+    image: prompt.image,
+    description: prompt.description,
+    tags: (prompt.tags || []).join(', '),
+    template: prompt.template,
+    variables: (prompt.variables || []).map(item => ({
+      key: item.key,
+      label: item.label,
+      type: item.type,
+      default: promptValues[item.key] ?? item.default ?? '',
+      help: item.help || ''
+    }))
+  };
+
+  saveBuilderState();
+  fillBuilderInputs();
+  studioSectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast('تم إرسال البرومبت الحالي إلى الاستوديو لتعديله أو توليد نسخة جديدة منه.');
+}
+
+function exportLibraryJson() {
+  const json = JSON.stringify(PROMPT_LIBRARY, null, 2);
+  downloadBlob('prompt-library.json', json, 'application/json;charset=utf-8');
+  showToast('تم تصدير المكتبة بصيغة JSON.');
 }
 
 searchEl.addEventListener('input', event => {
@@ -319,8 +640,52 @@ copyTemplateBtn.addEventListener('click', () => {
 });
 copyGeneratedBtn.addEventListener('click', () => copyText(outputEl.value, 'تم نسخ البرومبت الناتج.'));
 downloadBtn.addEventListener('click', downloadPrompt);
+sendToStudioBtn.addEventListener('click', () => {
+  if (activePrompt) loadPromptIntoBuilder(activePrompt);
+});
+jumpToStudioBtn.addEventListener('click', () => {
+  studioSectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+exportLibraryBtn.addEventListener('click', exportLibraryJson);
+
+[builderTitleEl, builderIdEl, builderCategoryEl, builderAccentEl, builderImageEl, builderDescriptionEl, builderTagsEl, builderTemplateEl]
+  .forEach(element => element.addEventListener('input', () => {
+    readBuilderInputs();
+    buildBuilderSnippet();
+  }));
+
+addVariableBtn.addEventListener('click', () => addBuilderVariable());
+scanVariablesBtn.addEventListener('click', scanTemplateVariables);
+buildSnippetBtn.addEventListener('click', () => {
+  buildBuilderSnippet();
+  showToast('تم بناء الكائن الجاهز للمكتبة.');
+});
+copySnippetBtn.addEventListener('click', () => copyText(builderOutputEl.value, 'تم نسخ كائن البرومبت.'));
+downloadSnippetBtn.addEventListener('click', () => {
+  const payload = buildBuilderPayload();
+  const json = JSON.stringify({
+    id: payload.id,
+    title: payload.title,
+    category: payload.category,
+    accentLabel: payload.accentLabel,
+    image: payload.image,
+    description: payload.description,
+    tags: payload.tagsArray,
+    variables: payload.variables,
+    template: payload.template
+  }, null, 2);
+  downloadBlob(`${slugifyArabic(payload.title)}.json`, json, 'application/json;charset=utf-8');
+  showToast('تم تنزيل الملف بصيغة JSON.');
+});
+downloadJsSnippetBtn.addEventListener('click', () => {
+  const payload = buildBuilderPayload();
+  downloadBlob(`${slugifyArabic(payload.title)}.js`, builderOutputEl.value, 'text/javascript;charset=utf-8');
+  showToast('تم تنزيل الملف بصيغة JS.');
+});
+builderResetBtn.addEventListener('click', resetBuilder);
 
 loadState();
+loadBuilderState();
 renderStats();
 searchEl.value = searchTerm;
 renderTabs();
@@ -334,3 +699,5 @@ if (activePrompt) {
   selectPrompt(activePrompt);
   renderGallery();
 }
+
+fillBuilderInputs();
