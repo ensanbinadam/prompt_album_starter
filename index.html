@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مكتبة البرومبتات اليدوية</title>
+  <meta name="description" content="مكتبة احترافية لجمع البرومبتات اليدوية العربية مع صور المعاينة والمتغيرات والنسخ الفوري." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Prompt Album</span>
+        <h1>مكتبة البرومبتات اليدوية</h1>
+        <p>
+          منصة واحدة لجمع البرومبتات اليدوية الراقية، مع صورة نموذجية لكل عمل، وحقول متغيرة،
+          وتوليد فوري للناتج الجاهز لنسخه إلى Nano Banana.
+        </p>
+        <div class="hero-stats">
+          <div class="stat-card">
+            <strong id="heroPromptCount">0</strong>
+            <span>برومبتات</span>
+          </div>
+          <div class="stat-card">
+            <strong id="heroCategoryCount">0</strong>
+            <span>تصنيفات</span>
+          </div>
+          <div class="stat-card">
+            <strong>Nano Banana</strong>
+            <span>جاهز للاستخدام</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-panel glass-card">
+        <label class="search-wrap" for="globalSearch">
+          <span>ابحث في المكتبة</span>
+          <input id="globalSearch" type="search" placeholder="اسم النموذج، التصنيف، أو كلمة من الوصف" />
+        </label>
+        <div id="categoryTabs" class="tabs" aria-label="تصنيفات البرومبتات"></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="library glass-card">
+        <div class="panel-head">
+          <div>
+            <h2>الألبوم</h2>
+            <p>اختر النموذج الذي تريد تخصيصه ونسخه.</p>
+          </div>
+          <span id="promptCount" class="counter-pill">0 نموذج</span>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </aside>
+
+      <section class="workspace">
+        <div id="emptyState" class="empty-state glass-card">
+          <div class="empty-icon">✦</div>
+          <h2>اختر برومبتًا من الألبوم</h2>
+          <p>
+            ستظهر هنا صورة النموذج، ووصفه، وحقول التخصيص، والبرومبت النهائي الجاهز للنسخ.
+          </p>
+        </div>
+
+        <article id="detailView" class="detail hidden">
+          <section class="preview glass-card">
+            <div class="preview-image-wrap">
+              <img id="detailImage" alt="صورة النموذج" />
+            </div>
+            <div class="preview-copy">
+              <div class="meta-row">
+                <span id="detailCategory" class="badge"></span>
+                <span id="detailAccent" class="soft-badge"></span>
+              </div>
+              <h2 id="detailTitle"></h2>
+              <p id="detailDescription"></p>
+              <div id="detailTags" class="tag-list"></div>
+              <div class="meta-grid">
+                <div class="meta-box">
+                  <span>عدد المتغيرات</span>
+                  <strong id="detailVarCount">0</strong>
+                </div>
+                <div class="meta-box">
+                  <span>عدد الأحرف</span>
+                  <strong id="detailCharCount">0</strong>
+                </div>
+                <div class="meta-box">
+                  <span>الحالة</span>
+                  <strong>جاهز</strong>
+                </div>
+              </div>
+              <div class="action-row">
+                <button id="copyGeneratedBtn" type="button">نسخ البرومبت الناتج</button>
+                <button id="downloadBtn" class="secondary" type="button">تنزيل TXT</button>
+                <button id="copyTemplateBtn" class="ghost" type="button">نسخ القالب الأصلي</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="editor-grid">
+            <div class="form-card glass-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>المتغيرات</h3>
+                  <p>غيّر القيم وسيتم تحديث البرومبت تلقائيًا.</p>
+                </div>
+              </div>
+              <form id="variablesForm" class="form"></form>
+              <div class="sticky-actions">
+                <button id="generateBtn" type="button">تحديث البرومبت</button>
+                <button id="resetBtn" class="secondary" type="button">إعادة القيم الافتراضية</button>
+              </div>
+            </div>
+
+            <div class="output-card glass-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>البرومبت الناتج</h3>
+                  <p>النص النهائي المخصص حسب المتغيرات المدخلة.</p>
+                </div>
+                <span id="outputState" class="counter-pill quiet">يتحدث تلقائيًا</span>
+              </div>
+              <textarea id="output" rows="24" spellcheck="false"></textarea>
+            </div>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>نسخة مطوّرة من مكتبة البرومبتات اليدوية — قابلة للتوسعة بإضافة أي برومبت جديد عبر ملف البيانات فقط.</p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="prompts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
